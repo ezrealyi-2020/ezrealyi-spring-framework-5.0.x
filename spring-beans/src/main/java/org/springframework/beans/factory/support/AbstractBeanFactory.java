@@ -240,11 +240,13 @@ public abstract class AbstractBeanFactory extends FactoryBeanRegistrySupport imp
 			String name, @Nullable Class<T> requiredType, @Nullable Object[] args, boolean typeCheckOnly)
 			throws BeansException {
 
+		// 验证bean的名字是否非法
 		String beanName = transformedBeanName(name);
 		Object bean;
 
 		// Eagerly check singleton cache for manually registered singletons.
 		Object sharedInstance = getSingleton(beanName);
+
 		if (sharedInstance != null && args == null) {
 			if (logger.isDebugEnabled()) {
 				if (isSingletonCurrentlyInCreation(beanName)) {
@@ -258,15 +260,23 @@ public abstract class AbstractBeanFactory extends FactoryBeanRegistrySupport imp
 			bean = getObjectForBeanInstance(sharedInstance, name, beanName, null);
 		}
 
+		/**
+		 * 通过getSingleton返回的sharedInstance为空
+		 */
 		else {
 			// Fail if we're already creating this bean instance:
 			// We're assumably within a circular reference.
+			// 判断这个bean是不是在创建过程中，此时不是把bean放入prototypesCurrentlyInCreation中
+			// 在第二个getSingleton方法中把bean放入prototypesCurrentlyInCreation中
+			// prototypesCurrentlyInCreation 需要联系getSingleton方法
 			if (isPrototypeCurrentlyInCreation(beanName)) {
 				throw new BeanCurrentlyInCreationException(beanName);
 			}
 
 			// Check if bean definition exists in this factory.
+			//获取父类的beanfactory
 			BeanFactory parentBeanFactory = getParentBeanFactory();
+			//根据当前的beanfactory获取父一级的beanfactory，然后逐个遍历的查找我们需要的bean
 			if (parentBeanFactory != null && !containsBeanDefinition(beanName)) {
 				// Not found -> check parent.
 				String nameToLookup = originalBeanName(name);
@@ -284,6 +294,7 @@ public abstract class AbstractBeanFactory extends FactoryBeanRegistrySupport imp
 				}
 			}
 
+			//判断并把需要创建的bean打上正在创建标记
 			if (!typeCheckOnly) {
 				markBeanAsCreated(beanName);
 			}
@@ -313,8 +324,11 @@ public abstract class AbstractBeanFactory extends FactoryBeanRegistrySupport imp
 
 				// Create bean instance.
 				if (mbd.isSingleton()) {
+					//getSingleton中的第二个参数类型是ObjectFactory<?>，是一个函数式接口，不会立刻执行，而是在
+					//getSingleton方法中，调用ObjectFactory的getObject，才会执行createBean
 					sharedInstance = getSingleton(beanName, () -> {
 						try {
+							// 只有AbstractAutowireCapableBeanFactory实现了createBean
 							return createBean(beanName, mbd, args);
 						}
 						catch (BeansException ex) {
