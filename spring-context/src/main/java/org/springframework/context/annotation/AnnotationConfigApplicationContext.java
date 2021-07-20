@@ -70,10 +70,10 @@ public class AnnotationConfigApplicationContext extends GenericApplicationContex
 
 		//初始化一个Bean读取器
 		// 此段代码做的事情:
-		// 1. 初始化一个注解BeanDefinition读取器
+		// 1. 初始化一个注解BeanDefinition读取器，并且将registry(注册表，也就是this)维护到了reader中，后面register()方法中用到了
 		// 2. 将spring内置的7个类封装成RootBeanDefinition并注册到bean工厂,
 		this.reader = new AnnotatedBeanDefinitionReader(this);
-		
+
 		//初始化一个扫描器，它仅仅是在我们外部手动调用 .scan 等方法才有用，常规方式是不会用到scanner对象的
 
 		// 并没啥用, 虽然ClassPathBeanDefinitionScanner类的作用是扫描@ComponentScan注解提供的包路径。
@@ -201,8 +201,17 @@ public class AnnotationConfigApplicationContext extends GenericApplicationContex
 	 * @see #scan(String...)
 	 * @see #refresh()
 	 */
+	/**
+	 * 传入的是一个被注解类的Class数组, 可以是配置类也可以是普通类
+	 * (什么叫配置类什么叫普通类, 在后续的源码系列中会更新)
+	 *
+	 * @param annotatedClasses one or more annotated classes,
+	 */
 	public void register(Class<?>... annotatedClasses) {
 		Assert.notEmpty(annotatedClasses, "At least one annotated class must be specified");
+		// 此处用到了构造方法new出来的AnnotatedBeanDefinitionReader,
+		// 这里解释下, 为什么能用这个类来将传入的类注册到bean工厂中: 因为reader内部维护了一个registry,
+		// 这个registry就是AnnotationConfigApplicationContext
 		this.reader.register(annotatedClasses);
 	}
 

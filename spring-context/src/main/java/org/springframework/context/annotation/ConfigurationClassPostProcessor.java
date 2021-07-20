@@ -271,7 +271,7 @@ public class ConfigurationClassPostProcessor implements BeanDefinitionRegistryPo
 
 			// 内部有两个标记位来标记是否已经处理过了
 			// 这里会引发一连串知识盲点
-			// 当我们注册配置类的时候，可以不加Configuration注解，直接使用Component ComponentScan Import ImportResource注解，称之为Lite配置类
+			// 当我们注册配置类的时候，可以不加Configuration注解，直接使用Component ComponentScan Import ImportResource Bean注解，称之为Lite配置类
 			// 如果加了Configuration注解，就称之为Full配置类
 			// 如果我们注册了Lite配置类，我们getBean这个配置类，会发现它就是原本的那个配置类
 			// 如果我们注册了Full配置类，我们getBean这个配置类，会发现它已经不是原本那个配置类了，而是已经被cglib代理的类了
@@ -291,6 +291,8 @@ public class ConfigurationClassPostProcessor implements BeanDefinitionRegistryPo
 			//在这个方法内部，会做判断，这个配置类是Full配置类，还是Lite配置类，并且做上标记
 			//满足条件，加入到configCandidates
 			else if (ConfigurationClassUtils.checkConfigurationClassCandidate(beanDef, this.metadataReaderFactory)) {
+				// configCandidates顾名思义是配置类的候选者
+				// 所以里面全是配置类(但不包含@Component注解的类，因为该注解的类已经被解析添加到工厂了)
 				configCandidates.add(new BeanDefinitionHolder(beanDef, beanName));
 			}
 		}

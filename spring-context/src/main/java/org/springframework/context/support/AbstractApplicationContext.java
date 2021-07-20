@@ -577,6 +577,12 @@ public abstract class AbstractApplicationContext extends DefaultResourceLoader
 			//还是一些准备工作，添加了两个后置处理器：ApplicationContextAwareProcessor，ApplicationListenerDetector
 			//还设置了 忽略自动装配 和 允许自动装配 的接口,如果不存在某个bean的时候，spring就自动注册singleton bean
 			//还设置了bean表达式解析器 等
+
+			// 这个方法执行完成, spring的bean单例容器中会存在三个bean,
+			// 分别是systemEnvironment, environment, systemProperties
+			// 同时会添加ApplicationContextAwareProcessor的后置处理器, 这个处理器没有走spring的bean初始化,
+			// 是在内部直接new出来的, 该处理器是用来处理实现了ApplicationContextAware接口的bean,
+			//  调用重写的set方法, 所以可以利用这种方法获取spring的上下文对象
 			prepareBeanFactory(beanFactory);
 
 			try {
@@ -587,13 +593,49 @@ public abstract class AbstractApplicationContext extends DefaultResourceLoader
 				// Invoke factory processors registered as beans in the context.
 				//执行自定义的BeanFactoryPostProcessor和内置的BeanFactoryPostProcessor
 				//BeanDefinitionRegistryPostProcessor接口继承了BeanFactoryPostProcessor，所以也会注册所有实现BeanDefinitionRegistryPostProcessor接口的类
+
+				// 调用后置处理器, 此方法太重要了, 在后续的源码解读系列中会解析它
+				// 先大致总结下它做了什么事
+				// 1. 处理手动添加的BeanFactoryPostProcessor
+				//   1.1 调用手动添加的BeanDefinitionRegistryPostProcessor, 并添加到存储它的集合中,
+				//       该集合名字为: registryProcessors
+				//   1.2 存储手动添加的BeanFactoryPostProcessor,
+				//       该集合名字为: regularPostProcessors
+				//   注意: 上面这个步骤是if else逻辑, 存了一个另外一个就不会存了
+				// 2. 执行BeanDefinitionRegistryPostProcessor类型且实现了PriorityOrdered接
+				//    口的后置处理器. 默认执行spring内置BeanDefinitionRegistryPostProcessor
+				//    后置处理器(ConfigurationClassPostProcessor), 这个后置处理器执行完之后,
+				//    所有能被扫描出来的bean都以BeanDefinition的方式注册到bean工厂了
+				// 3. 执行BeanDefinitionRegistryPostProcessor类型且实现了
+				//    Ordered接口的后置处理器
+				// 4. 执行以@Component方式添加的BeanDefinitionRegistryPostProcessor类型没实现
+				//    Ordered和PriorityOrdered接口的后置处理器
+				// 5. 执行regularPostProcessors和registryProcessors数据结构中
+				//    BeanFactoryPostProcessor类型的后置处理器(在此处执行
+				//    ConfigurationClassPostProcessor类的postProcessBeanFactory方法, 主要是
+				//    为全配置类生成了cglib代理类的Class对象, 并修改它的beanDefinition信息为代
+				//    理类的信息
+				// 6. 执行以@Component形式添加并实现了PriorityOrdered接口的BeanFactoryPost
+				//    Processor后置处理器
+				// 7. 执行以@Component形式添加并实现了Ordered接口的BeanFactoryPost
+				//    Processor后置处理器
+				// 8. 执行以@Component形式添加并未实现PriorityOrdered和Ordered接口的Bean
+				//    FactoryPostProcessor后置处理器
 				invokeBeanFactoryPostProcessors(beanFactory);
 
 				// Register bean processors that intercept bean creation.
 				// 注册BeanPostProcessor
+
+				// 本方法会注册所有的 BeanPostProcessor，将所有实现了 BeanPostProcessor 接口的类加载到 BeanFactory 的集合中。
+				// BeanPostProcessor 接口是 Spring 初始化 bean 时对外暴露的扩展点，
+				// Spring IoC 容器允许 BeanPostProcessor 在容器初始化 bean 的前后，添加自己的逻辑处理。
+				// 在 registerBeanPostProcessors 方法只是注册到 BeanFactory 中，具体调用是在 bean 初始化的时候。
+				// 具体的：在所有 bean 实例化时，执行初始化方法前会调用所有 BeanPostProcessor 的 postProcessBeforeInitialization 方法，
+				// 在执行初始化方法后会调用所有 BeanPostProcessor 的 postProcessAfterInitialization 方法
 				registerBeanPostProcessors(beanFactory);
 
 				// Initialize message source for this context.
+				// 一步主要作用是初始化国际化文件
 				initMessageSource();
 
 				// Initialize event multicaster for this context.
@@ -713,7 +755,7 @@ public abstract class AbstractApplicationContext extends DefaultResourceLoader
 		beanFactory.addPropertyEditorRegistrar(new ResourceEditorRegistrar(this, getEnvironment()));
 
 		// Configure the bean factory with context callbacks.
-		//添加一个后置处理器：ApplicationContextAwareProcessor，此后置处理处理器实现了BeanPostProcessor接口
+		//添加一个后置处理器：ApplicationContextAwareProcessor，此后置处理器实现了BeanPostProcessor接口
 		beanFactory.addBeanPostProcessor(new ApplicationContextAwareProcessor(this));
 
 		//以下接口，忽略自动装配
