@@ -245,6 +245,7 @@ public abstract class AbstractBeanFactory extends FactoryBeanRegistrySupport imp
 		Object bean;
 
 		// Eagerly check singleton cache for manually registered singletons.
+		// 从singletonObjects中获取
 		Object sharedInstance = getSingleton(beanName);
 
 		if (sharedInstance != null && args == null) {
@@ -296,6 +297,7 @@ public abstract class AbstractBeanFactory extends FactoryBeanRegistrySupport imp
 
 			//判断并把需要创建的bean打上正在创建标记
 			if (!typeCheckOnly) {
+				// 在alreadyCreated(Set)中加入beanName
 				markBeanAsCreated(beanName);
 			}
 

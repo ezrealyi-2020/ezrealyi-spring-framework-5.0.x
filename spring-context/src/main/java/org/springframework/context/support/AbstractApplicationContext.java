@@ -639,6 +639,7 @@ public abstract class AbstractApplicationContext extends DefaultResourceLoader
 				initMessageSource();
 
 				// Initialize event multicaster for this context.
+				// ApplicationEventMulticaster事件多播器创建
 				initApplicationEventMulticaster();
 
 				// Initialize other special beans in specific context subclasses.
@@ -646,6 +647,7 @@ public abstract class AbstractApplicationContext extends DefaultResourceLoader
 				onRefresh();
 
 				// Check for listener beans and register them.
+				// 注册监听器，绑定事件
 				registerListeners();
 
 				// Instantiate all remaining (non-lazy-init) singletons.
